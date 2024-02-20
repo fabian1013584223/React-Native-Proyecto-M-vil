@@ -1,0 +1,379 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+import { show_alerta } from '../function';
+import imagenproyecto from "../assets/img/imagenproyecto.png";
+
+const ShowStock = () => {
+  const url = 'https://localhost:7289/api/stocks'; 
+  const [stockList, setStockList] = useState([]);
+  const [stockId, setstockId] = useState('');
+  const URL = `https://localhost:7289/api/stocks/${stockId}`; 
+  const [cantidadReal, setCantidadReal] = useState(0);
+  const [cantidadIdeal, setCantidadIdeal] = useState(0);
+  const [cantidadMinima, setCantidadMinima] = useState(0);
+  const [cantidadAlarma, setCantidadAlarma] = useState(0);
+  const [fechaIngreso, setFechaIngreso] = useState('');
+  const [operation, setOperation] = useState(1);
+  const [title, setTitle] = useState('');
+
+  useEffect(() => {
+    getStockList();
+  }, []);
+
+  const getStockList = async () => {
+    const response = await axios.get(url);
+    setStockList(response.data);
+  };
+
+  const openModal = (op, stockId,cantidadAlarma,cantidadMinima,cantidadReal,cantidadIdeal,fechaIngreso) => {
+    setstockId('');
+    setCantidadReal(0);
+    setCantidadIdeal(0);
+    setCantidadMinima(0);
+    setCantidadAlarma(0);
+    setFechaIngreso('');
+    setOperation(op);
+
+    if (op === 1) {
+      setTitle('Registrar Stock');
+    } else if (op === 2) {
+      setTitle('Editar Stock');
+      setstockId(stockId);
+      setCantidadReal(cantidadReal);
+      setCantidadIdeal(cantidadIdeal);
+      setCantidadMinima(cantidadMinima);
+      setCantidadAlarma(cantidadAlarma);
+      setFechaIngreso(fechaIngreso);
+    }
+
+    window.setTimeout(function () {
+      document.getElementById('cantidadReal').focus();
+    }, 500);
+  };
+
+  const validar = () => {
+    console.log("Validar función ejecutada"); // Mensaje de depuración
+    var parametros;
+    var metodo;
+    if (cantidadReal === 0) {
+      show_alerta('Escriba precio de compra', 'warning');
+    } else if (cantidadIdeal === 0) {
+      show_alerta('Escriba precio de venta', 'warning');
+    } else if (cantidadMinima=== 0) {
+      show_alerta('Escriba precio de descuento', 'warning');
+    } else if (cantidadAlarma === 0) {
+      show_alerta('Escriba fecha de descuento', 'warning');
+    } else if (fechaIngreso === 0) {
+      show_alerta('Escriba estado del precio', 'warning');
+    } else {
+      if (operation === 1) {
+        parametros = {
+         cantidadReal: cantidadReal,
+          cantidadIdeal: cantidadIdeal,
+          cantidadMinima: cantidadMinima,
+          cantidadAlarma: cantidadAlarma,
+          fechaIngreso: fechaIngreso,
+        };
+        metodo = 'POST';
+      } else {
+        parametros = {
+          id: stockId,
+          cantidadReal: cantidadReal,
+          cantidadIdeal: cantidadIdeal,
+          cantidadMinima: cantidadMinima,
+          cantidadAlarma: cantidadAlarma,
+          fechaIngreso: fechaIngreso,
+        };
+        metodo = 'PUT';
+      }
+      enviarSolicitud(metodo, parametros);
+      ActualizarSolicitud(metodo, parametros);
+    }
+  };
+
+  const enviarSolicitud = async ( metodo,parametros) => {
+    await axios({ method:metodo, url: url, data: parametros })
+      .then(function (respuesta) {
+        var tipo = respuesta.data[0];
+        var msj = respuesta.data[1];
+        show_alerta(msj, tipo);
+        if (tipo === 'success') {
+          document.getElementById('btnCerrar').click();
+          getStockList();
+        }
+      })
+      .catch(function (error) {
+        show_alerta('Error en la solicitud', 'error');
+        console.log(error);
+      });
+  };  const ActualizarSolicitud = async ( metodo,parametros) => {
+    await axios({ method:metodo, url: URL, data: parametros })
+      .then(function (respuesta) {
+        var tipo = respuesta.data[0];
+        var msj = respuesta.data[1];
+        show_alerta(msj, tipo);
+        if (tipo === 'success') {
+          document.getElementById('btnCerrar').click();
+          getStockList();
+        }
+      })
+      .catch(function (error) {
+        show_alerta('Error en la solicitud', 'error');
+        console.log(error);
+      });
+  };
+
+  const deleteStock = (stockId) => {
+    const MySwal = withReactContent(Swal);
+
+    MySwal.fire({
+      title: `¿Seguro desea eliminar este registro de Stock?`,
+      icon: 'question',
+      text: 'No se podrá deshacer esta acción',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`${url}/${stockId}`);
+          show_alerta('Registro de Stock eliminado exitosamente', 'success');
+          getStockList();
+        } catch (error) {
+          show_alerta('Error al eliminar el registro de Stock', 'error');
+          console.error(error);
+        }
+      } else {
+        show_alerta('El registro de Stock no fue eliminado', 'info');
+      }
+    });
+  };
+
+  return (
+    <div className='App'>
+      <header>
+        <nav className="navbar navbar-expand-md py-3 navbar-light" style={{ marginTop: '15px', color: 'var(--bs-cyan)', background: 'var(--bs-link-hover-color)', height: '119px' }}>
+        <div className="container">
+          <img src={imagenproyecto} alt="imagenproyecto"width="100 "height="80"style={{ height: '80px' }} />
+            <span className="bs-icon-sm bs-icon-rounded bs-icon-primary d-flex justify-content-center align-items-center me-2 bs-icon"></span>
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navcol-2">
+            <span className="visually-hidden">Toggle navigation</span>
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navcol-2" style={{ color: 'var(--bs-black)', fontSize: '20px' }}>
+            <div className="collapse navbar-collapse" id="navcol-2">
+            <span className="navbar-text" style={{textAlign: 'center',
+            paddingTop: '0px',    
+            paddingBottom: '5px',   
+             marginTop: '2px',
+             fontSize: '20px',
+             fontFamily: 'Anaheim, sans-serif',
+             color: 'var(--bs-white)',  
+              fontWeight: 'bold',   
+               paddingLeft: '0px',    
+            paddingRight: '55px',    marginLeft: '18px',marginRight: '-24px' }}>Servicio tecnológico&nbsp;</span>
+                <ul className="navbar-nav ms-auto">
+                    <li className="nav-item"><a className="nav-link active" data-bss-hover-animate="flash" href="./" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif', fontSize: '16px' }}>Inicio</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./Derechos" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Derechos</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./Nosotros" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Nosotros</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./TablaProductos" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Productos</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./Administracion" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Administracion</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./Registro" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Registrarse</a></li>
+                    <li className="nav-item" data-bss-hover-animate="flash" style={{ color: 'var(--bs-black)', fontWeight: 'normal' }}><a className="nav-link" data-bss-hover-animate="flash" href="./Iniciosesion" style={{ color: 'var(--bs-black)', fontWeight: 'normal', fontFamily: 'ABeeZee, sans-serif' , fontSize: '16px'}}>Iniciar sesion</a></li>
+              </ul>
+              </div>
+              </div>
+            </div>
+            </nav>
+        </header>
+      <div className='container-fluid'>
+        <div className='row mt-3'>
+          <div className='col-md-4 offset-4'>
+            <div className='d-grid mx-auto'>
+              <button onClick={() => openModal(1)} className='btn btn-dark' data-bs-toggle='modal' data-bs-target='#modalStock'>
+                <i className='fa-solid fa-circle-plus'></i> Añadir
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className='row mt-3'>
+          <div className='col-12 col-lg-8 offset-0 offset-lg-12'>
+            <div className='table-responsive'>
+              <table className='table table-bordered'>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>ID</th>
+                    <th>Cantidad Real</th>
+                    <th>Cantidad Ideal</th>
+                    <th>Cantidad Mínima</th>
+                    <th>Cantidad Alamar</th>
+                    <th>Fecha Ingreso</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className='table-group-divider'>
+                  {stockList.map((stock, index) => (
+                    <tr key={stock.stockId}>
+                      <td>{index + 1}</td>
+                      <td>{stock.stockId}</td>
+                      <td>{stock.cantidadReal}</td>
+                      <td>{stock.cantidadIdeal}</td>
+                      <td>{stock.cantidadMinima}</td>
+                      <td>{stock.cantidadAlarma}</td>
+                      <td>{stock.fechaIngreso}</td>
+                      <td>
+                      <button
+                          onClick={() =>
+                            openModal(2, stock.stockId,stock.cantidadReal,stock.cantidadIdeal,stock.cantidadMinima,stock.cantidadAlarma,stock.fechaIngreso)
+                          }
+                          className='btn btn-warning'
+                          data-bs-toggle='modal'
+                          data-bs-target='#modalStock'
+                        >
+                          <i className='fa-solid fa-edit'></i>
+                        </button>
+                        &nbsp;
+                        <button onClick={() => deleteStock(stock.stockId)} className='btn btn-danger'>
+                          <i className='fa-solid fa-trash'></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer>
+        <footer className="text-center py-4" style={{background:' var(--bs-gray-200)'}}>
+            <div className="container">
+                <div className="row row-cols-1 row-cols-lg-3">
+                    <div className="col">
+                        <p className="text-muted my-2" style={{color:' var(--bs-gray-100)'}}>Copyright&nbsp;© 2023 Brand</p>
+                    </div>
+                    <div className="col">
+                        <ul className="list-inline my-2">
+                            <li className="list-inline-item me-4">
+                                <div className="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" className="bi bi-facebook">
+                                        <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"></path>
+                                    </svg></div>
+                            </li>
+                            <li className="list-inline-item me-4">
+                                <div className="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" className="bi bi-twitter">
+                                        <path d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.006-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.087.793A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115 3.23 3.23 0 0 1-.614-.057 3.283 3.283 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"></path>
+                                    </svg></div>
+                            </li>
+                            <li className="list-inline-item">
+                                <div className="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" className="bi bi-instagram">
+                                        <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0h.003zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599.28.28.453.546.598.92.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.47 2.47 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.478 2.478 0 0 1-.92-.598 2.48 2.48 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233 0-2.136.008-2.388.046-3.231.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92.28-.28.546-.453.92-.598.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045v.002zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92zm-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217zm0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334z"></path>
+                                    </svg></div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div className="col">
+            <ul className="list-inline my-2">
+                <li className="list-inline-item"><a className="link-secondary" href="#">Privacy Policy</a></li>
+                <li className="list-inline-item"><a className="link-secondary" href="#">Terms of Use</a></li>
+            </ul>
+        </div>
+                </div>
+            </div>
+        </footer>
+    </footer>
+      <div id='modalStock' className='modal fade' aria-hidden='true'>
+        <div className='modal-dialog'>
+          <div className='modal-content'>
+            <div className='modal-header'>
+              <label className='h5'>{title}</label>
+              <button type='button' className='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
+            </div>
+        
+            <div className='modal-body'>
+              <input type='hidden' id='id'></input>
+              <div className='input-group mb-3'>
+                <span className='input-group-text'>
+                  Cantidad Real
+                </span>
+                <input
+                  type='number'
+                  id='cantidadReal'
+                  className='form-control'
+                  placeholder='Cantidad Real'
+                  value={cantidadReal}
+                  onChange={(e) => setCantidadReal(parseInt(e.target.value))}
+                ></input>
+              </div>
+              <div className='input-group mb-3'>
+                <span className='input-group-text'>
+                  Cantidad Ideal
+                </span>
+                <input
+                  type='number'
+                  id='cantidadIdeal'
+                  className='form-control'
+                  placeholder='Cantidad Ideal'
+                  value={cantidadIdeal}
+                  onChange={(e) => setCantidadIdeal(parseInt(e.target.value))}
+                ></input>
+              </div>
+              <div className='input-group mb-3'>
+                <span className='input-group-text'>
+                  Cantidad Mínima
+                </span>
+                <input
+                  type='number'
+                  id='cantidadMinima'
+                  className='form-control'
+                  placeholder='Cantidad Mínima'
+                  value={cantidadMinima}
+                  onChange={(e) => setCantidadMinima(parseInt(e.target.value))}
+                ></input>
+              </div>
+              <div className='input-group mb-3'>
+                <span className='input-group-text'>
+                  Cantidad Alarma
+                </span>
+                <input
+                  type='number'
+                  id='cantidadAlamar'
+                  className='form-control'
+                  placeholder='Cantidad Alamar'
+                  value={cantidadAlarma}
+                  onChange={(e) => setCantidadAlarma(parseInt(e.target.value))}
+                ></input>
+              </div>
+              <div className='input-group mb-3'>
+                <span className='input-group-text'>
+                  Fecha Ingreso
+                </span>
+                <input
+                  type='date'
+                  id='fechaIngreso'
+                  className='form-control'
+                  value={fechaIngreso}
+                  onChange={(e) => setFechaIngreso(e.target.value)}
+                ></input>
+              </div>
+              <div className='d-grid col-6 mx-auto'>
+                <button onClick={() => validar()} className='btn btn-success'>
+                  <i className='fa-solid fa-floppy-disk'></i> Guardar
+                </button>
+              </div>
+            </div>
+            <div className='modal-footer'>
+              <button type='button' id='btnCerrar' className='btn btn-secondary' data-bs-dismiss='modal'>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShowStock;
